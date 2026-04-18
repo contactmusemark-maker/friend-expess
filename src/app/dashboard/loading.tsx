@@ -1,0 +1,5 @@
+import LoadingPage from '@/components/ui/LoadingSkeleton'
+
+export default function DashboardLoading() {
+  return <LoadingPage />
+}
