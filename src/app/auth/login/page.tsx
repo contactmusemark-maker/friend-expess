@@ -1,13 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Wallet, Mail, Lock, ArrowRight, Loader2 } from 'lucide-react'
 
 export default function LoginPage() {
-  const router = useRouter()
   const supabase = createClient()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -19,19 +17,21 @@ export default function LoginPage() {
     setLoading(true)
     setError(null)
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
 
     if (error) {
       setError(error.message)
       setLoading(false)
-    } else {
-      window.location.href = '/dashboard'
+      return
+    }
+
+    if (data.session) {
+      window.location.replace('/dashboard')
     }
   }
 
   return (
     <div className="animate-fade-in-up">
-      {/* Logo */}
       <div className="text-center mb-8">
         <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 mb-4">
           <Wallet className="w-7 h-7 text-emerald-400" />
@@ -40,10 +40,8 @@ export default function LoginPage() {
         <p className="text-muted-foreground text-sm mt-1">Sign in to your account</p>
       </div>
 
-      {/* Form card */}
       <div className="glass-card rounded-2xl p-8">
         <form onSubmit={handleLogin} className="space-y-5">
-          {/* Email */}
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-muted-foreground">Email</label>
             <div className="relative">
@@ -59,7 +57,6 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Password */}
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-muted-foreground">Password</label>
             <div className="relative">
@@ -75,14 +72,12 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Error */}
           {error && (
             <div className="text-sm text-rose-400 bg-rose-400/10 border border-rose-400/20 rounded-lg px-4 py-3">
               {error}
             </div>
           )}
 
-          {/* Submit */}
           <button
             type="submit"
             disabled={loading}
@@ -91,9 +86,7 @@ export default function LoginPage() {
             {loading ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
-              <>
-                Sign in <ArrowRight className="w-4 h-4" />
-              </>
+              <>Sign in <ArrowRight className="w-4 h-4" /></>
             )}
           </button>
         </form>
