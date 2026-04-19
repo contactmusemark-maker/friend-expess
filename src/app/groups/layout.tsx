@@ -1,4 +1,3 @@
-import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import Sidebar from '@/components/layout/Sidebar'
 import TopBar from '@/components/layout/TopBar'
@@ -6,14 +5,11 @@ import TopBar from '@/components/layout/TopBar'
 export default async function GroupsLayout({ children }: { children: React.ReactNode }) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/login')
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single()
-
+  let profile = null
+  if (user) {
+    const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+    profile = data
+  }
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       <Sidebar profile={profile} />
