@@ -22,14 +22,27 @@ export async function middleware(request: NextRequest) {
   )
 
   const { data: { user } } = await supabase.auth.getUser()
-
   const path = request.nextUrl.pathname
 
-  if (!user && (path.startsWith('/dashboard') || path.startsWith('/groups') || path.startsWith('/transactions') || path.startsWith('/calendar'))) {
+  // Allow auth routes always
+  if (path.startsWith('/auth/')) {
+    if (user && path === '/auth/login') {
+      return NextResponse.redirect(new URL('/dashboard', request.url))
+    }
+    return supabaseResponse
+  }
+
+  // Protect dashboard routes
+  if (!user && (
+    path.startsWith('/dashboard') ||
+    path.startsWith('/groups') ||
+    path.startsWith('/transactions') ||
+    path.startsWith('/calendar')
+  )) {
     return NextResponse.redirect(new URL('/auth/login', request.url))
   }
 
-  if (user && (path === '/' || path === '/auth/login' || path === '/auth/signup')) {
+  if (user && path === '/') {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
