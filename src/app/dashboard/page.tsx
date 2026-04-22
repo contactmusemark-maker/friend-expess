@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
 import StatCards from '@/components/dashboard/StatCards'
 import FriendBalances from '@/components/dashboard/FriendBalances'
 import RecentTransactions from '@/components/dashboard/RecentTransactions'
@@ -9,9 +8,15 @@ import type { Transaction, Profile } from '@/types'
 export default async function DashboardPage() {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/login')
 
-  // Fetch all transactions involving this user
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <p className="text-muted-foreground">Please <a href="/auth/login" className="text-emerald-400">sign in</a> to continue.</p>
+      </div>
+    )
+  }
+
   const { data: transactions } = await supabase
     .from('transactions')
     .select(`
@@ -25,7 +30,6 @@ export default async function DashboardPage() {
 
   const txns = (transactions ?? []) as Transaction[]
 
-  // Compute stats
   const totalLent = txns
     .filter(t => t.from_user === user.id && t.status !== 'completed')
     .reduce((sum, t) => sum + Number(t.remaining_amount), 0)
@@ -34,31 +38,22 @@ export default async function DashboardPage() {
     .filter(t => t.to_user === user.id && t.status !== 'completed')
     .reduce((sum, t) => sum + Number(t.remaining_amount), 0)
 
-  // Per-friend balances
   const balanceMap = new Map<string, { profile: Profile; balance: number }>()
   for (const t of txns) {
     if (t.status === 'completed') continue
     if (t.from_user === user.id && t.to_profile) {
       const key = t.to_user
       const existing = balanceMap.get(key)
-      balanceMap.set(key, {
-        profile: t.to_profile,
-        balance: (existing?.balance ?? 0) + Number(t.remaining_amount),
-      })
+      balanceMap.set(key, { profile: t.to_profile, balance: (existing?.balance ?? 0) + Number(t.remaining_amount) })
     }
     if (t.to_user === user.id && t.from_profile) {
       const key = t.from_user
       const existing = balanceMap.get(key)
-      balanceMap.set(key, {
-        profile: t.from_profile,
-        balance: (existing?.balance ?? 0) - Number(t.remaining_amount),
-      })
+      balanceMap.set(key, { profile: t.from_profile, balance: (existing?.balance ?? 0) - Number(t.remaining_amount) })
     }
   }
 
   const friendBalances = Array.from(balanceMap.values())
-
-  // Chart data: last 7 days
   const chartData = buildChartData(txns, user.id)
 
   return (
@@ -67,9 +62,7 @@ export default async function DashboardPage() {
         <h1 className="text-2xl font-bold text-foreground">Overview</h1>
         <p className="text-muted-foreground text-sm mt-0.5">Your financial snapshot at a glance</p>
       </div>
-
       <StatCards totalLent={totalLent} totalOwed={totalOwed} netBalance={totalLent - totalOwed} txnCount={txns.length} />
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div className="lg:col-span-2">
           <SpendingChart data={chartData} />
@@ -78,7 +71,6 @@ export default async function DashboardPage() {
           <FriendBalances balances={friendBalances} />
         </div>
       </div>
-
       <RecentTransactions transactions={txns.slice(0, 8)} currentUserId={user.id} />
     </div>
   )
@@ -90,7 +82,6 @@ function buildChartData(txns: Transaction[], userId: string) {
     d.setDate(d.getDate() - (6 - i))
     return d.toISOString().split('T')[0]
   })
-
   return days.map(date => {
     const dayTxns = txns.filter(t => t.created_at.startsWith(date))
     return {
